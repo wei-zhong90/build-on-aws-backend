@@ -3,37 +3,103 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   backend
 
-  Sample SAM Template for backend
+  test backend for builder creed
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 3
 
+Parameters:
+  StageName:
+    Type: String
+    Default: Prod
+
 Resources:
-  HelloWorldFunction:
+  BackendFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: hello_world/
+      CodeUri: backend_functions/functions/
       Handler: app.lambda_handler
       Runtime: python3.8
+      Timeout: 10
+      MemorySize: 256
       Events:
-        HelloWorld:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+        test:
+          Type: HttpApi
           Properties:
-            Path: /hello
+            Path: /test
             Method: get
+            ApiId: !Ref MyApi
+
+  AuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend_functions/Authorizer/
+      Handler: app.handler
+      Runtime: nodejs14.x
+      Timeout: 10
+      Environment:
+        Variables:
+          ISSUER: https://dev-3618325.okta.com/oauth2/default
+          AUDIENCE: 0oa2wq9baxP3GjOSw5d7
+          CLIENT_ID: 0oa2wq9baxP3GjOSw5d7
+
+  MyApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref StageName
+      AccessLogSettings:
+        DestinationArn: !GetAtt ApiLog.Arn
+        Format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","routeKey":"$context.routeKey", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength", "lambdaIntegrationError": "$context.integrationErrorMessage", "Error": "$context.error.message", "ErrorType": "$context.error.responseType", "AuthorizerError": "$context.authorizer.error" }'
+      Auth:
+        DefaultAuthorizer: LambdaRequestAuthorizer
+        Authorizers:
+          LambdaRequestAuthorizer:
+            FunctionArn: !GetAtt AuthorizerFunction.Arn
+            FunctionInvokeRole: !GetAtt ApiGatewayRole.Arn
+            Identity:
+              Headers:
+                - Authorization
+            AuthorizerPayloadFormatVersion: 1.0
+
+  ApiLog:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "ApiGateway-${MyApi}-access-logs"
+      RetentionInDays: 1
+
+  ApiGatewayRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: ApiGatewayRole
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 'lambda:InvokeFunction'
+                Resource: !GetAtt AuthorizerFunction.Arn
+
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  HelloWorldApi:
-    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  HelloWorldFunction:
-    Description: "Hello World Lambda Function ARN"
-    Value: !GetAtt HelloWorldFunction.Arn
-  HelloWorldFunctionIamRole:
-    Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt HelloWorldFunctionRole.Arn
+  BackendApi:
+    Description: "API Gateway endpoint URL for Prod stage for test function"
+    Value: !Sub "https://${MyApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${StageName}/test"
+  BackendFunction:
+    Description: "test Lambda Function ARN"
+    Value: !GetAtt BackendFunction.Arn
+
