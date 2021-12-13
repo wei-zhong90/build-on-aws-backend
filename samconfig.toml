@@ -3,8 +3,9 @@ version = 0.1
 [default.deploy]
 [default.deploy.parameters]
 stack_name = "buildercreed"
-s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1d396kbqfopbz"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-jp8nw97n2b76"
 s3_prefix = "buildercreed"
-region = "ap-northeast-1"
+region = "ap-northeast-2"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
+parameter_overrides = "StageName=\"Prod\" EnvironmentName=\"prod\" VpcCIDR=\"10.192.0.0/16\" PublicSubnet1CIDR=\"10.192.10.0/24\" PublicSubnet2CIDR=\"10.192.11.0/24\" PrivateSubnet1CIDR=\"10.192.20.0/24\" PrivateSubnet2CIDR=\"10.192.21.0/24\" DBClusterName=\"builderCluster\" DBInstanceName=\"builderInstance\" MasterUser=\"builder\" DBInstanceClass=\"db.t3.medium\""
