@@ -58,6 +58,8 @@ def lambda_handler(event, context):
 def search_handler(event, context):
     print(event)
     query = {
+        "from": 0,
+        'size': 50,
         'query': {
             "query_string": {
                 "query": event['queryStringParameters']['search_string'],
@@ -70,6 +72,8 @@ def search_handler(event, context):
         body = query,
         index = "blogs"
     )
+    
+    print(response)
     
     return {
         "statusCode": 200,
