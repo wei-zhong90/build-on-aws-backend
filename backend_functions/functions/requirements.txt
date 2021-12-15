@@ -1,2 +1,4 @@
 requests
 pymongo
+requests_aws4auth
+opensearch-py

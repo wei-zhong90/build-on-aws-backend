@@ -313,6 +313,36 @@ Resources:
 
 
 
+  SearchFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: backend_functions/functions/
+      Handler: app.search_handler
+      Runtime: python3.8
+      Timeout: 10
+      MemorySize: 256
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref DefaultSecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref PasswordSecret
+      Environment:
+        Variables:
+          USERNAME: !Ref MasterUser
+          CLUSTER_URL: !GetAtt DBCluster.Endpoint
+          SECRET: !Ref PasswordSecret
+      Events:
+        test:
+          Type: HttpApi
+          Properties:
+            Path: /blogs/search
+            Method: get
+            ApiId: !Ref MyApi
+
   BackendFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -360,6 +390,14 @@ Resources:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: !Ref StageName
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowHeaders:
+          - "*"
+          - "Authorization"
+        AllowMethods:
+          - "*"
       AccessLogSettings:
         DestinationArn: !GetAtt ApiLog.Arn
         Format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","routeKey":"$context.routeKey", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength", "lambdaIntegrationError": "$context.integrationErrorMessage", "Error": "$context.error.message", "ErrorType": "$context.error.responseType", "AuthorizerError": "$context.authorizer.error" }'
